@@ -12,6 +12,6 @@ jobs:
 
     - name: Build & Push Docker image
       run: |
-        echo "${{ secrets.ACR_PASSWORD }}" | docker login acrtp2<initiales>.azurecr.io -u ${{ secrets.ACR_USERNAME }} --password-stdin
-        docker build -t acrtp2<initiales>.azurecr.io/tp2-cicd:initial .
-        docker push acrtp2<initiales>.azurecr.io/tp2-cicd:initial
+        echo "${{ secrets.ACR_PASSWORD }}" | docker login acrwe123.azurecr.io -u ${{ secrets.ACR_USERNAME }} --password-stdin
+        docker build -t acrwe123.azurecr.io/tp2-cicd:initial .
+        docker push acrwe123.azurecr.io/tp2-cicd:initial
