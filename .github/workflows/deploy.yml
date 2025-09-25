@@ -5,6 +5,7 @@ on:
     branches: [ main ]
 
 jobs:
+  # Étape 1 : Build & Test
   build-test:
     runs-on: ubuntu-latest
     steps:
@@ -23,18 +24,23 @@ jobs:
         run: npm test
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/tp2-cicd:latest .
+        run: docker build -t tp2-cicd-app .
 
-      - name: Log in to ACR
-        run: echo ${{ secrets.ACR_PASSWORD }} | docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
-
-      - name: Push Docker image
-        run: docker push ${{ secrets.ACR_LOGIN_SERVER }}/tp2-cicd:latest
-
+  # Étape 2 : Déploiement sur STAGING
   deploy-staging:
     runs-on: ubuntu-latest
     needs: build-test
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Authentification à Azure avec le Service Principal
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Déploiement vers Azure Container Apps - STAGING
       - name: Deploy to Azure Container Apps (staging)
         uses: azure/CLI@v1
         with:
@@ -42,13 +48,24 @@ jobs:
             az containerapp update \
               --name aca-tp2-staging \
               --resource-group rg-tp2 \
-              --image ${{ secrets.ACR_LOGIN_SERVER }}/tp2-cicd:latest
+              --image acrwe123.azurecr.io/tp2-cicd:latest
 
+  # Étape 3 : Déploiement sur PROD
   deploy-prod:
     runs-on: ubuntu-latest
     needs: deploy-staging
     if: github.ref == 'refs/heads/main'
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Authentification à Azure avec le Service Principal
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Déploiement vers Azure Container Apps - PROD
       - name: Deploy to Azure Container Apps (prod)
         uses: azure/CLI@v1
         with:
@@ -56,4 +73,4 @@ jobs:
             az containerapp update \
               --name aca-tp2-prod \
               --resource-group rg-tp2 \
-              --image ${{ secrets.ACR_LOGIN_SERVER }}/tp2-cicd:latest
+              --image acrwe123.azurecr.io/tp2-cicd:latest
