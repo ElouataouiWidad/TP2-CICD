@@ -5,8 +5,8 @@ on:
     branches: [ main ]
 
 jobs:
-  # Étape 1 : Build & Test
-  build-test:
+  # Étape 1 : Build, Test & Push vers ACR
+  build-push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -23,24 +23,34 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Build Docker image
-        run: docker build -t tp2-cicd-app .
-
-  # Étape 2 : Déploiement sur STAGING
-  deploy-staging:
-    runs-on: ubuntu-latest
-    needs: build-test
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Authentification à Azure avec le Service Principal
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Déploiement vers Azure Container Apps - STAGING
+      - name: Log in to ACR
+        run: |
+          az acr login --name acrwe123
+
+      - name: Build & Push Docker image to ACR
+        run: |
+          IMAGE=acrwe123.azurecr.io/tp2-cicd:latest
+          docker build -t $IMAGE .
+          docker push $IMAGE
+
+  # Étape 2 : Déploiement sur STAGING
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: build-push
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Deploy to Azure Container Apps (staging)
         uses: azure/CLI@v1
         with:
@@ -59,13 +69,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Authentification à Azure avec le Service Principal
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Déploiement vers Azure Container Apps - PROD
       - name: Deploy to Azure Container Apps (prod)
         uses: azure/CLI@v1
         with:
